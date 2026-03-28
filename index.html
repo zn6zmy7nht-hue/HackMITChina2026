@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -83,7 +83,6 @@
         <a href="#overview" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Overview</a>
         <a href="#heatmap" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Heatmap</a>
         <a href="#report" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Report</a>
-        <a href="#contact" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Contact</a>
       </nav>
       <button type="button" id="btnExport" class="btn-primary inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white">
         <span data-lucide="download" class="h-4 w-4" aria-hidden="true"></span>
@@ -106,13 +105,13 @@
             <span data-lucide="flame" class="h-4 w-4" aria-hidden="true"></span>
             View heatmap
           </a>
-          <a href="#contact" class="inline-flex items-center gap-2 rounded-xl border-2 border-stone-400/60 bg-white/50 px-5 py-3 text-sm font-semibold text-ink transition hover:border-stone-500 hover:bg-white">
-            <span data-lucide="mail" class="h-4 w-4" aria-hidden="true"></span>
-            Get updates
+          <a href="#report" class="inline-flex items-center gap-2 rounded-xl border-2 border-stone-400/60 bg-white/50 px-5 py-3 text-sm font-semibold text-ink transition hover:border-stone-500 hover:bg-white">
+            <span data-lucide="file-text" class="h-4 w-4" aria-hidden="true"></span>
+            View report
           </a>
         </div>
       </div>
-      <div id="heroSeasonPreview" class="overflow-hidden rounded-2xl border border-stone-400/40 bg-[#e8e4d9] p-3 shadow-md inline-heat-hero" aria-label="当前季节热力图预览"></div>
+      <div id="heroSeasonPreview" class="overflow-hidden rounded-2xl border border-stone-400/40 bg-[#e8e4d9] p-3 shadow-md inline-heat-hero" aria-label="Preview of the current season heatmap"></div>
     </section>
 
     <!-- Stats -->
@@ -148,7 +147,7 @@
       <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 class="text-xl font-bold text-ink">Seasonal λ heatmaps</h2>
-          <p class="text-sm text-stone-600">拖动滑块或点选季节切换视图；热力图由页面内数据绘制，不依赖外链或本地 PNG。</p>
+          <p class="text-sm text-stone-600">Drag the slider or pick a season to switch views. Heatmaps are drawn from embedded data—no external or local PNG files required.</p>
         </div>
         <div class="flex items-center gap-2 rounded-xl bg-panel px-3 py-2 text-xs font-medium text-stone-600 ring-1 ring-stone-400/40">
           <span data-lucide="palette" class="h-4 w-4 text-accent" aria-hidden="true"></span>
@@ -163,7 +162,7 @@
         <p id="seasonSubTitle" class="mb-4 text-center text-sm font-semibold text-stone-600">2024 (left) vs 2025 (right)</p>
 
         <div class="overflow-x-auto rounded-xl border border-stone-500/30 bg-stone-300/20 p-2 sm:p-3">
-          <div id="seasonInfographic" class="inline-heat-wrap mx-auto max-w-full min-w-[min(100%,640px)]" role="img" aria-label="季节并排密度热力图"></div>
+          <div id="seasonInfographic" class="inline-heat-wrap mx-auto max-w-full min-w-[min(100%,640px)]" role="img" aria-label="Side-by-side seasonal density heatmap"></div>
         </div>
 
         <p class="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-stone-600 sm:text-sm">
@@ -216,41 +215,10 @@
       </div>
     </section>
 
-    <!-- Form -->
-    <section id="contact" class="mx-auto max-w-xl rounded-2xl border border-stone-400/40 bg-panel p-6 shadow-sm sm:p-8">
-      <h2 class="mb-1 text-xl font-bold text-ink">Contact</h2>
-      <p class="mb-6 text-sm text-stone-600">We’ll reply within 2 business days. Fields marked * are required.</p>
-      <form id="contactForm" class="space-y-5" novalidate>
-        <div>
-          <label for="name" class="mb-1.5 block text-sm font-semibold text-ink">Name *</label>
-          <input id="name" name="name" type="text" required minlength="2" maxlength="80"
-            class="w-full rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none ring-accent/0 transition focus:border-accent focus:ring-2 focus:ring-accent/25"
-            placeholder="Your name" autocomplete="name" />
-          <p id="errName" class="mt-1 hidden text-xs font-medium text-accent"></p>
-        </div>
-        <div>
-          <label for="email" class="mb-1.5 block text-sm font-semibold text-ink">Email *</label>
-          <input id="email" name="email" type="email" required
-            class="w-full rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
-            placeholder="you@example.com" autocomplete="email" />
-          <p id="errEmail" class="mt-1 hidden text-xs font-medium text-accent"></p>
-        </div>
-        <div>
-          <label for="msg" class="mb-1.5 block text-sm font-semibold text-ink">Message *</label>
-          <textarea id="msg" name="msg" required minlength="10" maxlength="2000" rows="4"
-            class="w-full resize-y rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
-            placeholder="Describe your request (min 10 characters)"></textarea>
-          <p id="errMsg" class="mt-1 hidden text-xs font-medium text-accent"></p>
-        </div>
-        <button type="submit" class="btn-primary w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-white sm:w-auto sm:px-10">
-          Submit
-        </button>
-      </form>
-    </section>
   </main>
 
   <footer class="mt-12 border-t border-stone-400/30 bg-paper py-8 text-center text-xs text-stone-500">
-    <p>热力图由页面内嵌数据与 CSS 绘制，无需图片文件；导出为当前季节的 SVG 矢量文件。</p>
+    <p>Heatmaps are rendered with embedded data and CSS—no image assets. Export downloads the current season as an SVG file.</p>
   </footer>
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -532,12 +500,12 @@
         slider.setAttribute('aria-valuetext', s.label);
         mainTitleEl.textContent = s.mainTitle;
         subTitleEl.textContent = s.subTitle;
-        readout.textContent = '当前：' + s.label + ' — ' + s.subTitle;
+        readout.textContent = 'Showing: ' + s.label + ' — ' + s.subTitle;
         mainEl.style.opacity = '0.92';
         renderSeasonInto(mainEl, s, { hero: false });
         requestAnimationFrame(function () { mainEl.style.opacity = '1'; });
         renderSeasonInto(heroEl, s, { hero: true });
-        mainEl.setAttribute('aria-label', s.label + ' 并排密度热力图');
+        mainEl.setAttribute('aria-label', s.label + ' side-by-side density heatmap');
 
         quickBtns.forEach(function (btn) {
           var on = parseInt(btn.getAttribute('data-index'), 10) === i;
@@ -598,44 +566,7 @@
         a.click();
         a.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-        showToast('已下载 ' + s.label + ' 的 SVG 矢量图');
-      });
-
-      const form = document.getElementById('contactForm');
-      const errName = document.getElementById('errName');
-      const errEmail = document.getElementById('errEmail');
-      const errMsg = document.getElementById('errMsg');
-
-      function clearErrors() {
-        [errName, errEmail, errMsg].forEach(function (e) { e.classList.add('hidden'); e.textContent = ''; });
-      }
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        clearErrors();
-        const name = form.name.value.trim();
-        const email = form.email.value.trim();
-        const msg = form.msg.value.trim();
-        let ok = true;
-        if (name.length < 2) {
-          errName.textContent = 'Please enter at least 2 characters.';
-          errName.classList.remove('hidden');
-          ok = false;
-        }
-        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRe.test(email)) {
-          errEmail.textContent = 'Please enter a valid email address.';
-          errEmail.classList.remove('hidden');
-          ok = false;
-        }
-        if (msg.length < 10) {
-          errMsg.textContent = 'Message must be at least 10 characters.';
-          errMsg.classList.remove('hidden');
-          ok = false;
-        }
-        if (!ok) return;
-        showToast('Success — we received your message.');
-        form.reset();
+        showToast('Downloaded ' + s.label + ' figure as SVG.');
       });
     })();
   </script>
