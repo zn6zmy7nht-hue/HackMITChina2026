@@ -57,7 +57,30 @@ Our 5-person team has clear role division:
 - This AI-supported workflow significantly improved productivity and gave us confidence for large-scale on-site data processing.
 - For the RN model, given our limited mathematical background, we learned a practical strategy: first make input-output pipelines work reliably, then progressively deepen theoretical understanding.
 
-## What’s Next
-- Immediate goal: run the RN model successfully at the competition venue and convert AI visual outputs into meaningful population estimation results.
-- Next step: extend from static estimation to future population trend prediction.
-- Long-term vision: deploy the full pipeline on edge computing devices connected to field cameras for automated biodiversity monitoring, supporting ecological protection and agricultural loss reduction with scientific data.
+### Automated Biodiversity Monitoring via YOLOv8 & Royle-Nichols Statistical Modeling
+
+## Latest Project Milestones
+We have successfully expanded the system's analytical capabilities beyond simple detection to provide actionable ecological insights:
+* **Kilometer Grid Analysis:** Implemented population density and abundance statistics based on a standardized **1km × 1km grid** scale.
+* **Seasonal Dynamics:** Generated and compared **seasonal heatmaps** to visualize how wild boar distribution shifts across Spring, Summer, Autumn, and Winter.
+* **Interannual Trends:** Conducted **multi-year comparative analysis** to quantify population growth or decline over different years, providing a scientific basis for ecological management.
+
+## System Workflow
+1.  **Detection:** A lightweight **YOLOv8n** model filters infrared camera footage to identify wild boars with high precision (95.5%).
+2.  **Data Transformation:** AI detection logs are converted into a **time-space presence matrix** (Detection History).
+3.  **Statistical Inference:** The **RN (Royle-Nichols) Model** processes the matrix using Poisson and Bernoulli probabilistic formulations to estimate true abundance from detection frequency.
+4.  **Spatial Mapping:** Results are projected onto a **kilometer grid**, generating heatmaps that visualize population density and temporal changes.
+
+## Accomplishments & Results
+-   **Grid-Based Insights:** Successfully calculated density within 1km² units, allowing for targeted ecological interventions.
+-   **Spatiotemporal Analysis:** Our multi-season and multi-year comparisons revealed distinct migration patterns and long-term population trends, providing data-driven support for conservation strategies.
+
+## Future Vision
+* **Edge Deployment:** Running the full pipeline on edge computing devices for real-time field monitoring.
+* **Predictive Modeling:** Integrating environmental factors (vegetation, water sources, climate) to shift from "historical assessment" to "future trend prediction."
+* **Biodiversity Expansion:** Adapting the framework for other key species to support comprehensive, automated biodiversity protection.
+
+---
+
+## Tech Stack
+`Python` | `YOLOv8` | `PyTorch` | `RN Model (Royle-Nichols)` | `GIS Heatmapping` | `AI-Assisted Workflow (Cursor)`
