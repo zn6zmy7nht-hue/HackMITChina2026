@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wild Boar Density — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            paper: '#e6e2da',
+            ink: '#1a1814',
+            panel: '#ebe6dd',
+            accent: '#8b0000',
+            amber: '#ffb000',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    @keyframes navSlide {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .nav-enter { animation: navSlide 0.55s ease-out forwards; }
+    .heatmap-cell { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .heatmap-cell:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(26, 24, 20, 0.18); z-index: 2; }
+    .btn-primary { transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(139, 0, 0, 0.25); }
+    .btn-primary:active { transform: translateY(0); }
+    .toast-enter { animation: toastIn 0.35s ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translate(-50%, 12px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .season-range { -webkit-appearance: none; appearance: none; height: 10px; border-radius: 9999px; background: linear-gradient(90deg, #ffff00 0%, #ffb000 25%, #ff6b1a 50%, #c41e1e 75%, #3d0000 100%); outline: none; }
+    .season-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #1a1814; border: 3px solid #fafafa; box-shadow: 0 2px 8px rgba(0,0,0,0.25); cursor: grab; }
+    .season-range::-webkit-slider-thumb:active { cursor: grabbing; }
+    .season-range::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #1a1814; border: 3px solid #fafafa; cursor: grab; }
+    .season-fade { transition: opacity 0.25s ease; }
+    .inline-heat-wrap { transition: opacity 0.2s ease; }
+    .inline-heat-panels { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: flex-start; }
+    .inline-heat-panel { flex: 1 1 280px; max-width: 100%; min-width: min(100%, 260px); }
+    .inline-heat-meta { margin-bottom: 0.35rem; font-size: 0.7rem; font-weight: 600; color: #44403c; text-align: center; line-height: 1.3; }
+    .inline-heat-grid-shell { display: flex; gap: 4px; align-items: stretch; }
+    .inline-heat-y-rail { align-self: stretch; display: flex; flex-direction: column; min-width: 1.25rem; flex-shrink: 0; }
+    .inline-heat-y-axis { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 0 0 0.15rem; font-size: 0.55rem; font-weight: 600; color: #57534e; text-align: right; min-height: 5rem; }
+    .inline-heat-y-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.5rem; letter-spacing: 0.02em; align-self: center; margin-bottom: 0.25rem; max-height: 6rem; color: #57534e; }
+    .inline-heat-grid { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); grid-template-rows: repeat(10, minmax(0, 1fr)); gap: 1px; background: #1a1814; border: 1px solid #1a1814; flex: 1; min-height: 7rem; }
+    .inline-heat-cell { background: #c9c5bd; min-height: 1.5rem; }
+    .inline-heat-cell.fill { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-weight: 700; color: #fff; font-size: clamp(5px, 1.35vw, 9px); line-height: 1.05; padding: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.85); }
+    .inline-heat-x { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 1px; margin-top: 2px; margin-left: calc(1rem + 4px); font-size: 0.5rem; font-weight: 700; color: #44403c; text-align: center; }
+    .inline-heat-x-cap { font-size: 0.55rem; font-weight: 600; color: #57534e; text-align: center; margin-top: 2px; }
+    .inline-heat-scale { margin-top: 1rem; max-width: 42rem; margin-left: auto; margin-right: auto; }
+    .inline-heat-scale-bar { height: 14px; border-radius: 4px; border: 1px solid #57534e; background: linear-gradient(90deg, #ffff00 0%, #ffb000 25%, #ff6b1a 50%, #c41e1e 75%, #3d0000 100%); }
+    .inline-heat-scale-ticks { display: flex; justify-content: space-between; margin-top: 2px; font-size: 0.65rem; font-weight: 600; color: #44403c; padding: 0 2px; }
+    .inline-heat-hero .inline-heat-grid { min-height: 4.5rem; }
+    .inline-heat-hero .inline-heat-cell.fill { font-size: clamp(4px, 1.1vw, 7px); }
+    .inline-heat-hero .inline-heat-meta { font-size: 0.6rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-paper text-ink antialiased font-sans">
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-8 left-1/2 z-[100] hidden -translate-x-1/2 rounded-xl bg-ink px-6 py-3 text-sm font-medium text-white shadow-lg toast-enter" role="status"></div>
+
+  <!-- Nav -->
+  <header class="nav-enter sticky top-0 z-50 border-b border-stone-400/30 bg-paper/95 backdrop-blur-sm">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <a href="#" class="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">
+        <span data-lucide="grid-3x3" class="h-7 w-7 text-accent" aria-hidden="true"></span>
+        <span>BoarGrid <span class="font-semibold text-stone-600">Analytics</span></span>
+      </a>
+      <nav class="flex flex-wrap items-center gap-1 sm:gap-2" aria-label="Main">
+        <a href="#overview" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Overview</a>
+        <a href="#heatmap" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Heatmap</a>
+        <a href="#report" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Report</a>
+        <a href="#contact" class="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-400/20 hover:text-ink">Contact</a>
+      </nav>
+      <button type="button" id="btnExport" class="btn-primary inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+        <span data-lucide="download" class="h-4 w-4" aria-hidden="true"></span>
+        Export SVG
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <!-- Hero -->
+    <section id="overview" class="mb-12 grid gap-8 lg:grid-cols-2 lg:items-center">
+      <div>
+        <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-500">Royle–Nichols · Season-year</p>
+        <h1 class="mb-4 text-3xl font-bold leading-tight text-ink sm:text-4xl">Wild boar density (λ) across grid cells</h1>
+        <p class="mb-6 max-w-xl text-[15px] leading-relaxed text-stone-600">
+          Unified 60–75 scale: yellow = lower λ, deep red = higher λ. Side-by-side seasons for rapid comparison on a 15×10 km grid (A–O × 1–10).
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#heatmap" class="btn-primary inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white">
+            <span data-lucide="flame" class="h-4 w-4" aria-hidden="true"></span>
+            View heatmap
+          </a>
+          <a href="#contact" class="inline-flex items-center gap-2 rounded-xl border-2 border-stone-400/60 bg-white/50 px-5 py-3 text-sm font-semibold text-ink transition hover:border-stone-500 hover:bg-white">
+            <span data-lucide="mail" class="h-4 w-4" aria-hidden="true"></span>
+            Get updates
+          </a>
+        </div>
+      </div>
+      <div id="heroSeasonPreview" class="overflow-hidden rounded-2xl border border-stone-400/40 bg-[#e8e4d9] p-3 shadow-md inline-heat-hero" aria-label="当前季节热力图预览"></div>
+    </section>
+
+    <!-- Stats -->
+    <section class="mb-12 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-stone-400/35 bg-panel p-5 shadow-sm transition hover:shadow-md">
+        <div class="mb-2 flex items-center gap-2 text-stone-500">
+          <span data-lucide="calendar-range" class="h-5 w-5" aria-hidden="true"></span>
+          <span class="text-xs font-semibold uppercase tracking-wide">Seasons</span>
+        </div>
+        <p class="text-2xl font-bold text-ink">4</p>
+        <p class="text-sm text-stone-600">Spring · Summer · Autumn · Winter</p>
+      </div>
+      <div class="rounded-2xl border border-stone-400/35 bg-panel p-5 shadow-sm transition hover:shadow-md">
+        <div class="mb-2 flex items-center gap-2 text-stone-500">
+          <span data-lucide="map-pin" class="h-5 w-5" aria-hidden="true"></span>
+          <span class="text-xs font-semibold uppercase tracking-wide">Grid</span>
+        </div>
+        <p class="text-2xl font-bold text-ink">15 × 10</p>
+        <p class="text-sm text-stone-600">Columns A–O, rows 1–10</p>
+      </div>
+      <div class="rounded-2xl border border-stone-400/35 bg-panel p-5 shadow-sm transition hover:shadow-md">
+        <div class="mb-2 flex items-center gap-2 text-stone-500">
+          <span data-lucide="gauge" class="h-5 w-5" aria-hidden="true"></span>
+          <span class="text-xs font-semibold uppercase tracking-wide">λ scale</span>
+        </div>
+        <p class="text-2xl font-bold text-ink">60 – 75</p>
+        <p class="text-sm text-stone-600">Redistributed linear contrast</p>
+      </div>
+    </section>
+
+    <!-- Season slider + inline heatmaps (no image files) -->
+    <section id="heatmap" class="mb-12">
+      <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-ink">Seasonal λ heatmaps</h2>
+          <p class="text-sm text-stone-600">拖动滑块或点选季节切换视图；热力图由页面内数据绘制，不依赖外链或本地 PNG。</p>
+        </div>
+        <div class="flex items-center gap-2 rounded-xl bg-panel px-3 py-2 text-xs font-medium text-stone-600 ring-1 ring-stone-400/40">
+          <span data-lucide="palette" class="h-4 w-4 text-accent" aria-hidden="true"></span>
+          <span>Unified scale λ 60 → 75</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-stone-400/40 bg-[#e8e4d9] p-4 shadow-inner sm:p-6">
+        <h3 id="seasonMainTitle" class="mb-1 text-center text-sm font-bold leading-snug text-ink sm:text-base">
+          Spring (Mar-May) – side-by-side density λ (red = highest, yellow = lowest high) (Redistributed)
+        </h3>
+        <p id="seasonSubTitle" class="mb-4 text-center text-sm font-semibold text-stone-600">2024 (left) vs 2025 (right)</p>
+
+        <div class="overflow-x-auto rounded-xl border border-stone-500/30 bg-stone-300/20 p-2 sm:p-3">
+          <div id="seasonInfographic" class="inline-heat-wrap mx-auto max-w-full min-w-[min(100%,640px)]" role="img" aria-label="季节并排密度热力图"></div>
+        </div>
+
+        <p class="mx-auto mt-4 max-w-3xl text-center text-xs leading-relaxed text-stone-600 sm:text-sm">
+          Density λ – yellow = low density (marked at 60), red = high density (marked at 75) (Redistributed 60-75 range; same scale for all seasons).
+        </p>
+
+        <div class="mx-auto mt-8 max-w-2xl px-2">
+          <div class="mb-3 flex justify-between text-xs font-semibold text-stone-500 sm:text-sm">
+            <span>Spring</span>
+            <span>Summer</span>
+            <span>Autumn</span>
+            <span>Winter</span>
+          </div>
+          <input
+            type="range"
+            id="seasonSlider"
+            class="season-range w-full cursor-pointer"
+            min="0"
+            max="3"
+            step="1"
+            value="0"
+            aria-valuemin="0"
+            aria-valuemax="3"
+            aria-valuenow="0"
+            aria-valuetext="Spring"
+            aria-label="Select season heatmap"
+          />
+          <div class="mt-4 flex flex-wrap justify-center gap-2 sm:gap-3">
+            <button type="button" class="season-quick rounded-full border border-stone-400/60 bg-white/80 px-4 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:bg-white sm:text-sm" data-index="0">Spring</button>
+            <button type="button" class="season-quick rounded-full border border-stone-400/60 bg-white/80 px-4 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:bg-white sm:text-sm" data-index="1">Summer</button>
+            <button type="button" class="season-quick rounded-full border border-stone-400/60 bg-white/80 px-4 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:bg-white sm:text-sm" data-index="2">Autumn</button>
+            <button type="button" class="season-quick rounded-full border border-stone-400/60 bg-white/80 px-4 py-2 text-xs font-semibold text-ink transition hover:border-accent hover:bg-white sm:text-sm" data-index="3">Winter</button>
+          </div>
+          <p id="seasonReadout" class="mt-3 text-center text-sm font-medium text-stone-700" aria-live="polite">Showing: Spring</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Report strip -->
+    <section id="report" class="mb-12 rounded-2xl border border-stone-400/35 bg-ink p-6 text-paper sm:p-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-lg font-bold">Four-season unified infographic</h2>
+          <p class="mt-1 max-w-lg text-sm text-stone-300">Export-ready layout: 2×2 panels, shared color bar, English labels.</p>
+        </div>
+        <a href="#" class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber px-5 py-3 text-sm font-bold text-ink transition hover:brightness-110">
+          <span data-lucide="file-image" class="h-4 w-4" aria-hidden="true"></span>
+          Open spec
+        </a>
+      </div>
+    </section>
+
+    <!-- Form -->
+    <section id="contact" class="mx-auto max-w-xl rounded-2xl border border-stone-400/40 bg-panel p-6 shadow-sm sm:p-8">
+      <h2 class="mb-1 text-xl font-bold text-ink">Contact</h2>
+      <p class="mb-6 text-sm text-stone-600">We’ll reply within 2 business days. Fields marked * are required.</p>
+      <form id="contactForm" class="space-y-5" novalidate>
+        <div>
+          <label for="name" class="mb-1.5 block text-sm font-semibold text-ink">Name *</label>
+          <input id="name" name="name" type="text" required minlength="2" maxlength="80"
+            class="w-full rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none ring-accent/0 transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+            placeholder="Your name" autocomplete="name" />
+          <p id="errName" class="mt-1 hidden text-xs font-medium text-accent"></p>
+        </div>
+        <div>
+          <label for="email" class="mb-1.5 block text-sm font-semibold text-ink">Email *</label>
+          <input id="email" name="email" type="email" required
+            class="w-full rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+            placeholder="you@example.com" autocomplete="email" />
+          <p id="errEmail" class="mt-1 hidden text-xs font-medium text-accent"></p>
+        </div>
+        <div>
+          <label for="msg" class="mb-1.5 block text-sm font-semibold text-ink">Message *</label>
+          <textarea id="msg" name="msg" required minlength="10" maxlength="2000" rows="4"
+            class="w-full resize-y rounded-xl border border-stone-400/50 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+            placeholder="Describe your request (min 10 characters)"></textarea>
+          <p id="errMsg" class="mt-1 hidden text-xs font-medium text-accent"></p>
+        </div>
+        <button type="submit" class="btn-primary w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-white sm:w-auto sm:px-10">
+          Submit
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="mt-12 border-t border-stone-400/30 bg-paper py-8 text-center text-xs text-stone-500">
+    <p>热力图由页面内嵌数据与 CSS 绘制，无需图片文件；导出为当前季节的 SVG 矢量文件。</p>
+  </footer>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    (function () {
+      lucide.createIcons();
+
+      var LAM_MIN = 60;
+      var LAM_MAX = 75;
+      var COLS = 'ABCDEFGHIJKLMNO';
+
+      var SEASONS = [
+        {
+          label: 'Spring',
+          short: 'Spring (Mar–May)',
+          mainTitle: 'Spring (Mar-May) – side-by-side density λ (red = highest, yellow = lowest high) (Redistributed)',
+          subTitle: '2024 (left) vs 2025 (right)',
+          left: { year: 2024, csvRows: 26, rHat: 0.25, cells: [{ id: 'K7', lam: 72.47, n: 34 }, { id: 'N9', lam: 69.07, n: 1 }] },
+          right: { year: 2025, csvRows: 1089, rHat: 0.31, cells: [
+            { id: 'G8', lam: 70.73, n: 120 }, { id: 'I4', lam: 70.64, n: 95 }, { id: 'I9', lam: 70.1, n: 88 },
+            { id: 'J7', lam: 69.52, n: 72 }, { id: 'O9', lam: 69.46, n: 41 }, { id: 'F6', lam: 69.39, n: 55 },
+            { id: 'B4', lam: 69.18, n: 28 }, { id: 'N9', lam: 68.4, n: 15 }, { id: 'H4', lam: 68.4, n: 22 },
+            { id: 'C2', lam: 68.32, n: 18 }, { id: 'D3', lam: 68.58, n: 31 }, { id: 'G4', lam: 67.8, n: 12 },
+            { id: 'K8', lam: 67.67, n: 9 }, { id: 'L7', lam: 67.67, n: 11 }, { id: 'K6', lam: 67.49, n: 7 },
+            { id: 'H8', lam: 67.49, n: 6 }, { id: 'N7', lam: 67.38, n: 5 },
+          ] },
+        },
+        {
+          label: 'Summer',
+          short: 'Summer (Jun–Aug)',
+          mainTitle: 'Summer (Jun-Aug) – side-by-side density λ (red = highest, yellow = lowest high) (Redistributed)',
+          subTitle: '2024 (left) vs 2025 (right)',
+          left: { year: 2024, csvRows: 9, rHat: 0.25, cells: [{ id: 'K7', lam: 71.37, n: 12 }] },
+          right: { year: 2025, csvRows: 961, rHat: 0.309, cells: [
+            { id: 'D3', lam: 67.01, n: 7 }, { id: 'F6', lam: 70.02, n: 164 }, { id: 'G4', lam: 67.89, n: 20 },
+            { id: 'H4', lam: 67.32, n: 29 }, { id: 'I4', lam: 68.29, n: 31 }, { id: 'G8', lam: 71.57, n: 928 },
+            { id: 'I9', lam: 69.81, n: 158 }, { id: 'J7', lam: 69.47, n: 137 }, { id: 'K8', lam: 68.76, n: 67 },
+            { id: 'K6', lam: 66.55, n: 3 }, { id: 'L7', lam: 67.44, n: 15 }, { id: 'O9', lam: 67.18, n: 7 },
+          ] },
+        },
+        {
+          label: 'Autumn',
+          short: 'Autumn (Sep–Nov)',
+          mainTitle: 'Autumn (Sep-Nov) – side-by-side density λ (red = highest, yellow = lowest high) (Redistributed)',
+          subTitle: '2023 (left) vs 2024 (right)',
+          left: { year: 2023, csvRows: 66, rHat: 0.28, cells: [
+            { id: 'B1', lam: 68.27, n: 6 }, { id: 'J6', lam: 67.35, n: 4 }, { id: 'K7', lam: 69.15, n: 9 }, { id: 'N9', lam: 70.82, n: 11 },
+          ] },
+          right: { year: 2024, csvRows: 1201, rHat: 0.321, cells: [
+            { id: 'B1', lam: 68.5, n: 14 }, { id: 'B4', lam: 69.0, n: 22 }, { id: 'C2', lam: 67.9, n: 10 }, { id: 'D3', lam: 68.8, n: 19 },
+            { id: 'F6', lam: 69.4, n: 45 }, { id: 'G4', lam: 67.6, n: 25 }, { id: 'G8', lam: 70.8, n: 200 }, { id: 'H4', lam: 68.9, n: 38 },
+            { id: 'I4', lam: 69.1, n: 42 }, { id: 'I9', lam: 70.2, n: 180 }, { id: 'J6', lam: 67.5, n: 8 }, { id: 'J7', lam: 69.5, n: 50 },
+            { id: 'K7', lam: 70.0, n: 90 }, { id: 'K8', lam: 68.2, n: 30 }, { id: 'L7', lam: 67.8, n: 20 }, { id: 'M6', lam: 66.9, n: 12 },
+            { id: 'N7', lam: 68.1, n: 35 }, { id: 'N9', lam: 69.9, n: 75 }, { id: 'O9', lam: 68.4, n: 28 },
+          ] },
+        },
+        {
+          label: 'Winter',
+          short: 'Winter (Dec–Feb+1)',
+          mainTitle: 'Winter (Dec-Feb+1) – side-by-side density λ (red = highest, yellow = lowest high) (Redistributed)',
+          subTitle: '2023 (left) vs 2024 (right)',
+          left: { year: 2023, csvRows: 367, rHat: 0.299, cells: [
+            { id: 'B1', lam: 69.74, n: 66 }, { id: 'H5', lam: 69.68, n: 68 }, { id: 'K7', lam: 70.91, n: 239 }, { id: 'N9', lam: 70.65, n: 503 },
+          ] },
+          right: { year: 2024, csvRows: 1543, rHat: 0.319, cells: [
+            { id: 'K5', lam: 66.24, n: 20 }, { id: 'M6', lam: 66.6, n: 15 }, { id: 'K8', lam: 67.06, n: 25 }, { id: 'G4', lam: 67.54, n: 30 },
+            { id: 'B4', lam: 67.73, n: 18 }, { id: 'C2', lam: 67.89, n: 12 }, { id: 'F6', lam: 68.15, n: 40 }, { id: 'N7', lam: 68.52, n: 55 },
+            { id: 'O9', lam: 68.83, n: 22 }, { id: 'I9', lam: 70.67, n: 772 }, { id: 'H4', lam: 70.04, n: 443 }, { id: 'L7', lam: 69.75, n: 524 }, { id: 'N8', lam: 69.24, n: 138 },
+          ] },
+        },
+      ];
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function colorForLambda(lam) {
+        var t = (lam - LAM_MIN) / (LAM_MAX - LAM_MIN);
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
+        var stops = [
+          { t: 0, c: [255, 255, 0] }, { t: 0.25, c: [255, 176, 0] }, { t: 0.5, c: [255, 107, 26] },
+          { t: 0.75, c: [196, 30, 30] }, { t: 1, c: [61, 0, 0] },
+        ];
+        var j = 0;
+        for (var s = 0; s < stops.length - 1; s++) {
+          if (t <= stops[s + 1].t) { j = s; break; }
+          j = stops.length - 2;
+        }
+        var t0 = stops[j].t;
+        var t1 = stops[j + 1].t;
+        var u = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+        var c0 = stops[j].c;
+        var c1 = stops[j + 1].c;
+        var r = Math.round(lerp(c0[0], c1[0], u));
+        var g = Math.round(lerp(c0[1], c1[1], u));
+        var b = Math.round(lerp(c0[2], c1[2], u));
+        return 'rgb(' + r + ',' + g + ',' + b + ')';
+      }
+
+      function parseCellId(id) {
+        var m = String(id).match(/^([A-O])(\d{1,2})$/i);
+        if (!m) return null;
+        var col = m[1].toUpperCase().charCodeAt(0) - 65;
+        var row = parseInt(m[2], 10);
+        if (row < 1 || row > 10 || col < 0 || col > 14) return null;
+        return { col: col, row: row };
+      }
+
+      function fmtLam(x) {
+        var n = Math.round(x * 100) / 100;
+        return (n % 1 === 0 ? String(n) : n.toFixed(2));
+      }
+
+      function cellMap(cells) {
+        var map = {};
+        cells.forEach(function (c) {
+          var p = parseCellId(c.id);
+          if (p) map[p.col + ',' + p.row] = c;
+        });
+        return map;
+      }
+
+      function buildPanel(side) {
+        var map = cellMap(side.cells);
+        var wrap = document.createElement('div');
+        wrap.className = 'inline-heat-panel';
+        var meta = document.createElement('div');
+        meta.className = 'inline-heat-meta';
+        meta.textContent = 'Season-year ' + side.year + ' | CSV rows: ' + side.csvRows + ' | r_hat=' + side.rHat;
+        wrap.appendChild(meta);
+
+        var shell = document.createElement('div');
+        shell.className = 'inline-heat-grid-shell';
+        var yWrap = document.createElement('div');
+        yWrap.className = 'inline-heat-y-rail';
+        var yLbl = document.createElement('div');
+        yLbl.className = 'inline-heat-y-label';
+        yLbl.textContent = 'Row 1–10 (bottom→top)';
+        yWrap.appendChild(yLbl);
+        var yNums = document.createElement('div');
+        yNums.className = 'inline-heat-y-axis';
+        for (var yr = 10; yr >= 1; yr--) {
+          var yn = document.createElement('span');
+          yn.textContent = String(yr);
+          yNums.appendChild(yn);
+        }
+        yWrap.appendChild(yNums);
+        shell.appendChild(yWrap);
+
+        var grid = document.createElement('div');
+        grid.className = 'inline-heat-grid';
+        for (var r = 10; r >= 1; r--) {
+          for (var col = 0; col < 15; col++) {
+            var cell = document.createElement('div');
+            cell.className = 'inline-heat-cell';
+            var key = col + ',' + r;
+            if (map[key]) {
+              var d = map[key];
+              cell.classList.add('fill');
+              cell.style.backgroundColor = colorForLambda(d.lam);
+              cell.innerHTML = '<span>' + d.id + '</span><span>λ=' + fmtLam(d.lam) + '</span><span>n=' + d.n + '</span>';
+            }
+            grid.appendChild(cell);
+          }
+        }
+        shell.appendChild(grid);
+        wrap.appendChild(shell);
+
+        var xRow = document.createElement('div');
+        xRow.className = 'inline-heat-x';
+        for (var xc = 0; xc < 15; xc++) {
+          var xl = document.createElement('span');
+          xl.textContent = COLS[xc];
+          xRow.appendChild(xl);
+        }
+        wrap.appendChild(xRow);
+        var xCap = document.createElement('div');
+        xCap.className = 'inline-heat-x-cap';
+        xCap.textContent = 'Column A–O';
+        wrap.appendChild(xCap);
+        return wrap;
+      }
+
+      function buildScaleBar() {
+        var sc = document.createElement('div');
+        sc.className = 'inline-heat-scale';
+        var bar = document.createElement('div');
+        bar.className = 'inline-heat-scale-bar';
+        bar.setAttribute('role', 'presentation');
+        sc.appendChild(bar);
+        var ticks = document.createElement('div');
+        ticks.className = 'inline-heat-scale-ticks';
+        [60, 65, 70, 75].forEach(function (v) {
+          var sp = document.createElement('span');
+          sp.textContent = String(v);
+          ticks.appendChild(sp);
+        });
+        sc.appendChild(ticks);
+        return sc;
+      }
+
+      function renderSeasonInto(el, season, opts) {
+        opts = opts || {};
+        el.innerHTML = '';
+        var root = document.createElement('div');
+        root.className = 'inline-heat-panels';
+        root.appendChild(buildPanel(season.left));
+        root.appendChild(buildPanel(season.right));
+        el.appendChild(root);
+        if (!opts.hero) el.appendChild(buildScaleBar());
+      }
+
+      function seasonToSvg(s) {
+        var cw = 22;
+        var ch = 22;
+        var gap = 1;
+        var pad = 40;
+        var panelW = 15 * cw + 14 * gap;
+        var panelH = 10 * ch + 9 * gap;
+        var metaH = 28;
+        var between = 48;
+        var W = pad * 2 + panelW * 2 + between;
+        var H = pad + metaH + panelH + 50 + 36 + pad;
+
+        function rect(x, y, w, h, fill, stroke) {
+          return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + fill + '"' + (stroke ? ' stroke="' + stroke + '" stroke-width="0.5"' : '') + '/>';
+        }
+        function esc(t) {
+          return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function panelSvg(side, offsetX) {
+          var map = cellMap(side.cells);
+          var parts = [];
+          parts.push('<text x="' + (offsetX + panelW / 2) + '" y="' + (pad + 14) + '" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" fill="#44403c">' +
+            esc('Season-year ' + side.year + ' | CSV rows: ' + side.csvRows + ' | r_hat=' + side.rHat) + '</text>');
+          var gx0 = offsetX;
+          var gy0 = pad + metaH;
+          parts.push(rect(gx0, gy0, panelW, panelH, '#c9c5bd', '#1a1814'));
+          for (var r = 10; r >= 1; r--) {
+            for (var col = 0; col < 15; col++) {
+              var ri = 10 - r;
+              var x = gx0 + col * (cw + gap);
+              var y = gy0 + ri * (ch + gap);
+              var key = col + ',' + r;
+              var d = map[key];
+              if (d) {
+                parts.push(rect(x, y, cw, ch, colorForLambda(d.lam), '#1a1814'));
+                parts.push('<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 - 4) + '" text-anchor="middle" font-size="6" font-family="system-ui,sans-serif" fill="#fff">' + esc(d.id) + '</text>');
+                parts.push('<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 + 4) + '" text-anchor="middle" font-size="5.5" font-family="system-ui,sans-serif" fill="#fff">λ=' + esc(fmtLam(d.lam)) + '</text>');
+                parts.push('<text x="' + (x + cw / 2) + '" y="' + (y + ch / 2 + 11) + '" text-anchor="middle" font-size="5.5" font-family="system-ui,sans-serif" fill="#fff">n=' + esc(d.n) + '</text>');
+              } else {
+                parts.push(rect(x, y, cw, ch, '#d4d0c8', '#333'));
+              }
+            }
+          }
+          return parts.join('');
+        }
+        var body = panelSvg(s.left, pad) + panelSvg(s.right, pad + panelW + between);
+        var gradY = H - pad - 28;
+        body += '<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0%" stop-color="#ffff00"/><stop offset="25%" stop-color="#ffb000"/><stop offset="50%" stop-color="#ff6b1a"/><stop offset="75%" stop-color="#c41e1e"/><stop offset="100%" stop-color="#3d0000"/></linearGradient></defs>';
+        body += rect(pad, gradY, W - 2 * pad, 12, 'url(#g)', '#57534e');
+        body += '<text x="' + (W / 2) + '" y="' + (gradY + 26) + '" text-anchor="middle" font-size="9" font-family="system-ui,sans-serif" fill="#44403c">' +
+          esc('λ 60–75 · same scale all seasons') + '</text>';
+        return '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + body + '</svg>';
+      }
+
+      var slider = document.getElementById('seasonSlider');
+      var mainEl = document.getElementById('seasonInfographic');
+      var heroEl = document.getElementById('heroSeasonPreview');
+      var mainTitleEl = document.getElementById('seasonMainTitle');
+      var subTitleEl = document.getElementById('seasonSubTitle');
+      var readout = document.getElementById('seasonReadout');
+      var quickBtns = document.querySelectorAll('.season-quick');
+
+      function setSeasonIndex(i) {
+        i = Math.max(0, Math.min(3, parseInt(i, 10) || 0));
+        var s = SEASONS[i];
+        slider.value = String(i);
+        slider.setAttribute('aria-valuenow', String(i));
+        slider.setAttribute('aria-valuetext', s.label);
+        mainTitleEl.textContent = s.mainTitle;
+        subTitleEl.textContent = s.subTitle;
+        readout.textContent = '当前：' + s.label + ' — ' + s.subTitle;
+        mainEl.style.opacity = '0.92';
+        renderSeasonInto(mainEl, s, { hero: false });
+        requestAnimationFrame(function () { mainEl.style.opacity = '1'; });
+        renderSeasonInto(heroEl, s, { hero: true });
+        mainEl.setAttribute('aria-label', s.label + ' 并排密度热力图');
+
+        quickBtns.forEach(function (btn) {
+          var on = parseInt(btn.getAttribute('data-index'), 10) === i;
+          btn.classList.toggle('border-accent', on);
+          btn.classList.toggle('bg-accent/10', on);
+          btn.classList.toggle('ring-2', on);
+          btn.classList.toggle('ring-accent/40', on);
+        });
+      }
+
+      slider.addEventListener('input', function () {
+        setSeasonIndex(slider.value);
+      });
+
+      quickBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setSeasonIndex(btn.getAttribute('data-index'));
+        });
+      });
+
+      document.getElementById('heatmap').addEventListener('keydown', function (e) {
+        if (e.target === slider) return;
+        var v = parseInt(slider.value, 10);
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          setSeasonIndex(v - 1);
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          setSeasonIndex(v + 1);
+        }
+      });
+      document.getElementById('heatmap').setAttribute('tabindex', '0');
+
+      setSeasonIndex(0);
+
+      function showToast(message) {
+        var el = document.getElementById('toast');
+        el.textContent = message;
+        el.classList.remove('hidden');
+        el.classList.remove('toast-enter');
+        void el.offsetWidth;
+        el.classList.add('toast-enter');
+        clearTimeout(el._t);
+        el._t = setTimeout(function () { el.classList.add('hidden'); }, 3200);
+      }
+
+      document.getElementById('btnExport').addEventListener('click', function () {
+        var i = parseInt(slider.value, 10) || 0;
+        var s = SEASONS[i];
+        var svg = seasonToSvg(s);
+        var blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'boar-density-' + s.label.toLowerCase() + '.svg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        showToast('已下载 ' + s.label + ' 的 SVG 矢量图');
+      });
+
+      const form = document.getElementById('contactForm');
+      const errName = document.getElementById('errName');
+      const errEmail = document.getElementById('errEmail');
+      const errMsg = document.getElementById('errMsg');
+
+      function clearErrors() {
+        [errName, errEmail, errMsg].forEach(function (e) { e.classList.add('hidden'); e.textContent = ''; });
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearErrors();
+        const name = form.name.value.trim();
+        const email = form.email.value.trim();
+        const msg = form.msg.value.trim();
+        let ok = true;
+        if (name.length < 2) {
+          errName.textContent = 'Please enter at least 2 characters.';
+          errName.classList.remove('hidden');
+          ok = false;
+        }
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRe.test(email)) {
+          errEmail.textContent = 'Please enter a valid email address.';
+          errEmail.classList.remove('hidden');
+          ok = false;
+        }
+        if (msg.length < 10) {
+          errMsg.textContent = 'Message must be at least 10 characters.';
+          errMsg.classList.remove('hidden');
+          ok = false;
+        }
+        if (!ok) return;
+        showToast('Success — we received your message.');
+        form.reset();
+      });
+    })();
+  </script>
+</body>
+</html>
